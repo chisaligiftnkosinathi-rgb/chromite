@@ -35,8 +35,23 @@ PostgreSQL cluster (see `tests/db/README.md`).
 ## Current API
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/` | none | health |
-| GET | `/api/v1/mines/` | none | published chrome mines; filters `province`, `operating_status`, `limit`, `offset` |
+| GET | `/healthz` | none | liveness |
+| GET | `/readyz` | none | readiness: database answers a public query (503 if not) |
+| GET | `/api/v1/mines/` · `/api/v1/mines/{slug}` | none | published chrome mines |
+| GET | `/api/v1/laboratories/` · `/{id}` | none | published laboratories (directory status, not accreditation) |
+| GET | `/api/v1/laboratories/{id}/accreditation-scopes` | none | verified, currently valid scope entries only |
+| GET | `/api/v1/sampling-providers/` · `/{id}/services` | none | published providers; verified services only |
+| GET | `/api/v1/me/` | bearer | user, organisation memberships, staff role |
+| GET | `/api/v1/organizations/` · `/{id}` | bearer | your organisations only (404 for others) |
+| POST | `/api/v1/organizations/` | bearer | create an organisation; you become owner. Provider types cannot be self-declared |
+
+Every response carries `X-Request-ID` and security headers. Public endpoints are rate-limited
+per client (`RATE_LIMIT_PUBLIC_PER_MINUTE`), writes more strictly (`RATE_LIMIT_WRITE_PER_MINUTE`);
+the limiter is in-memory per process, so use a shared store before running several instances.
+Interactive docs are off in production unless `DOCS_ENABLED=true`.
+
+**Hosted note:** organisation sign-up depends on the consolidated migration in
+`supabase/migrations-proposed/`. Until it is approved and applied, the hosted project refuses it.
 
 The early `/api/v1/sample-batches/` endpoint is disabled (its table never existed);
 it is replaced by the booking/sample lifecycle in Phase 7.

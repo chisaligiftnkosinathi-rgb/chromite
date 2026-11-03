@@ -214,8 +214,11 @@ def _import_labs(cur, dataset: LaboratoryDataset, report: ImportReport) -> None:
             report.labs_inserted.append(name)
         for claim in lab.accreditation_claims:
             number = claim.accreditation_number_claimed or "no number given"
-            kind = ("says accredited" if claim.claim_type == "states_accredited"
-                    else "says accreditation is being pursued")
+            kind = {
+                "states_accredited": "says accredited",
+                "pursuing_accreditation": "says accreditation is being pursued",
+                "reported_expired": "accreditation reported as expired",
+            }[claim.claim_type]
             report.verification_queue.append(
                 f"lab {name}: {kind} ({claim.claimed_by}, {number}); check the SANAS schedule: {claim.claim}"
             )
@@ -253,6 +256,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--apply", action="store_true", help="commit (default: dry run, rolled back)")
     parser.add_argument("--mines", type=Path, default=DEFAULT_MINES)
     parser.add_argument("--labs", type=Path, default=DEFAULT_LABS)
+    parser.add_argument("--quiet", action="store_true", help="print counts only, not the verification queue")
     args = parser.parse_args(argv)
 
     try:
@@ -275,9 +279,10 @@ def main(argv: list[str] | None = None) -> int:
     for slug, missing in report.mines_held_back:
         print(f"  held back: {slug} (missing {', '.join(missing)})")
     print(f"  audit event: {'written' if report.audit_written and report.applied else 'would be written' if report.audit_written else 'skipped (no audit table)'}")
-    print("\nVerification queue:")
-    for item in report.verification_queue:
-        print(f"  - {item}")
+    if not args.quiet:
+        print("\nVerification queue:")
+        for item in report.verification_queue:
+            print(f"  - {item}")
     return 0
 
 

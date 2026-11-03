@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (app + database replay)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    # Throwaway PostGIS database for the migration replay and seed-import tests.
+    # It exists only for this run, has no data and is unreachable from outside.
+    # No secrets are used and the hosted Supabase project is never contacted.
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      CHROMITE_REPLAY_ADMIN_DSN: host=localhost port=5432 user=supabase_admin dbname=postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Show PostgreSQL client version
+        run: pg_dump --version
+
+      - name: Run the full test suite
+        run: python -m pytest -q -rfEs 2>&1 | tee pytest.log
+
+      - name: Fail if any test was skipped
+        run: |
+          if grep -Eq "[0-9]+ skipped" pytest.log; then
+            echo "Some tests were skipped in CI; every test must run here."
+            exit 1
+          fi

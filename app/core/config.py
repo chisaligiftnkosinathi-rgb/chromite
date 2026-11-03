@@ -40,6 +40,16 @@ class Settings(BaseSettings):
 
     CORS_ALLOW_CREDENTIALS: bool = True
 
+    # API exposure and abuse protection
+    # Interactive docs: on by default except in production.
+    DOCS_ENABLED: bool | None = None
+    # Requests per client per minute on public endpoints (in-memory, per process).
+    RATE_LIMIT_PUBLIC_PER_MINUTE: int = 120
+    # Requests per client per minute on authenticated write endpoints.
+    RATE_LIMIT_WRITE_PER_MINUTE: int = 20
+    # Only enable behind a trusted reverse proxy that sets X-Forwarded-For.
+    TRUST_PROXY_HEADERS: bool = False
+
     # Supabase
     SUPABASE_URL: str
     SUPABASE_KEY: SecretStr
@@ -169,6 +179,13 @@ class Settings(BaseSettings):
             )
 
         return self
+
+
+    @property
+    def docs_enabled(self) -> bool:
+        if self.DOCS_ENABLED is not None:
+            return self.DOCS_ENABLED
+        return self.APP_ENV != "production"
 
 
 settings = Settings()

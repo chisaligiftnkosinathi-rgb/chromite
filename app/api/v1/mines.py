@@ -1,15 +1,16 @@
 import logging
 from typing import List, Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from postgrest.exceptions import APIError
 
 from app.core.supabase import get_supabase_client
+from app.core.rate_limit import public_rate_limit
 from app.schemas.mine import MineResponse
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(public_rate_limit)])
 
 # Values allowed by the mines.operating_status CHECK constraint.
 OperatingStatus = Literal[
@@ -82,3 +83,27 @@ def get_mines(
             detail="Mine directory is temporarily unavailable.",
         )
 
+
+
+@router.get(
+    "/{slug}",
+    response_model=MineResponse,
+    summary="One published chrome mine",
+)
+def get_mine(slug: str = Path(min_length=3, max_length=80, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")):
+    try:
+        rows = (
+            get_supabase_client()
+            .table("public_mines")
+            .select("*")
+            .eq("slug", slug)
+            .limit(1)
+            .execute()
+            .data
+        ) or []
+    except Exception:
+        logger.exception("Mine lookup failed")
+        raise HTTPException(status_code=503, detail="Mine directory is temporarily unavailable.")
+    if not rows:
+        raise HTTPException(status_code=404, detail="Mine not found.")
+    return rows[0]

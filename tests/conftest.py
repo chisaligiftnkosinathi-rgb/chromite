@@ -29,3 +29,16 @@ for _key, _value in _TEST_ENV.items():
     os.environ[_key] = _value
 for _key in ("SUPABASE_SERVICE_ROLE_KEY", "DATABASE_URL"):
     os.environ.pop(_key, None)
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    """Rate-limit state is per process; start every test with a clean slate."""
+    from app.core import rate_limit
+
+    for limiter in (rate_limit.public_limiter, rate_limit.write_limiter):
+        limiter._hits.clear()
+    yield

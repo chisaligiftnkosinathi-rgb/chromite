@@ -119,8 +119,8 @@ class MineSeed(_Strict):
 
 class AccreditationClaim(_Strict):
     claim: str = Field(min_length=10, max_length=1000)
-    # What is being claimed: that accreditation is held, or only being pursued.
-    claim_type: Literal["states_accredited", "pursuing_accreditation"]
+    # What the evidence says: accreditation held, only being pursued, or reported expired.
+    claim_type: Literal["states_accredited", "pursuing_accreditation", "reported_expired"]
     accreditation_body: Literal["SANAS"]
     accreditation_number_claimed: Optional[str] = Field(default=None, pattern=r"^T\d{4}$")
     claimed_by: Literal["laboratory", "third_party"]

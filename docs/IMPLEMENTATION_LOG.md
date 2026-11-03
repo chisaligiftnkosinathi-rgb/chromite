@@ -37,7 +37,8 @@ Read-only audit. Full report: Chromite project doc `claude/phase-1-repository-au
 - No laboratory is marked accredited; 5 accreditation claims are queued as unverified (3 say
   accredited: T0974, T0658 lead, AHK Richards Bay; 2 say accreditation is being pursued). No accreditation scope or mining-right rows are created.
 - `app/seeding/`: validated models and an importer that refuses non-local databases, dry-runs by
-  default, imports drafts only, never overwrites reviewed records, and writes an audit event.
+  default, imports drafts only, and writes an audit event. (Overwrite protection was
+  incomplete in this first version; fixed in the review entry below.)
 - Tests at first commit: 26 model + 6 database tests; 198 passed with the replay cluster,
   85 passed / 116 skipped on Windows without it.
 - Hosted Supabase: not changed.
@@ -47,6 +48,20 @@ Read-only audit. Full report: Chromite project doc `claude/phase-1-repository-au
   re-runs (the previous upsert overwrote edits that left statuses unchanged; reproduced, then fixed).
 - DSN hardening: explicit local host required; `service=`, `servicefile=`, `hostaddr=` and
   PGHOSTADDR/PGSERVICE/PGSERVICEFILE refused; the connected address is re-checked after connecting.
-- Claims carry `claim_type` (`states_accredited` / `pursuing_accreditation`).
+- Claims carry `claim_type` (`states_accredited` / `pursuing_accreditation` / `reported_expired`);
+  the Mitra SK T0658 lead is `reported_expired` (certificate copy stated expiry 29 Oct 2025).
 - Local Supabase stack test now also runs the importer (dry run, apply, re-run) and checks the result.
 - Tests: 214 passed with the replay cluster; 97 passed / 120 skipped without it (outside Git).
+
+## 2026-11-03 — API foundation (branch api/foundation)
+- Platform: `/healthz`, `/readyz`; request IDs; security headers (HSTS in production);
+  `no-store` on authenticated and write responses; generic 500s with request ID; docs off in production.
+- Rate limiting: per-client sliding window (public 120/min, writes 20/min; in-memory, per process).
+- Permissions: `Principal` with RLS-sourced memberships and staff role (privileged read of
+  `platform_staff`); non-members get 404; provider types cannot be self-declared.
+- Endpoints: `/mines/{slug}`; laboratory, accreditation-scope, sampling-provider and service directories
+  (public views only); `/me`; organisations list, read and create (owner membership, orphan cleanup, audit).
+- CI: GitHub Actions runs the full suite with a throwaway PostGIS service and fails if any test is skipped.
+- Local stack test now also runs `tools/db/api_smoke.py`: two synthetic users, real tokens, RLS through the API.
+- Tests: 266 passed with the replay cluster (3 Git checks skipped outside a repo).
+- Hosted Supabase: not changed. Organisation sign-up there needs the consolidated migration.

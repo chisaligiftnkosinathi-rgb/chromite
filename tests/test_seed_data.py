@@ -178,9 +178,16 @@ def test_claim_type_required_and_counted():
     _, labs = load_datasets()
     types = [c.claim_type for lab in labs.records for c in lab.accreditation_claims]
     assert len(types) == 5
-    assert types.count("states_accredited") == 3
+    assert types.count("states_accredited") == 2
     assert types.count("pursuing_accreditation") == 2
+    assert types.count("reported_expired") == 1
     data = raw(DEFAULT_LABS)
     del data["records"][0]["accreditation_claims"][0]["claim_type"]
     with pytest.raises(ValidationError):
         LaboratoryDataset.model_validate(data)
+
+
+def test_expired_lead_is_not_labelled_accredited():
+    _, labs = load_datasets()
+    mitra = next(l for l in labs.records if l.laboratory_name.startswith("Mitra SK, Richards Bay"))
+    assert [c.claim_type for c in mitra.accreditation_claims] == ["reported_expired"]
