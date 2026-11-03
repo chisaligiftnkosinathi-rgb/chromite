@@ -132,8 +132,8 @@ if ($untracked -or $unstaged) {
 Invoke-Git commit -q -m "Phase 0: repository hygiene, CORS/config fixes, auth dependency, tests" -m "See docs/IMPLEMENTATION_LOG.md. Proposed migration kept outside supabase/migrations/. Hosted Supabase unchanged."
 
 Step 'Result'
-Invoke-Git log --oneline
+Invoke-Git --no-pager log --oneline
 Write-Host "Tracked files: $((& $GitExe ls-files).Count)"
-Invoke-Git status --short --branch
+Invoke-Git --no-pager status --short --branch
 Write-Host "`nDone. No remote configured; nothing pushed." -ForegroundColor Green
 Write-Host 'You may now delete the .phase0-baseline folder (it is git-ignored).'
