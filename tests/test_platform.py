@@ -5,8 +5,9 @@ from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.deps import get_public_client
+from app.api.health import get_readiness_checks
 from app.core import middleware
-from app.core.rate_limit import SlidingWindowLimiter, rate_limited
+from app.core.rate_limit import SlidingWindowLimiter, client_key, rate_limited
 from app.main import app
 from tests.fakes import FakeClient
 
@@ -26,17 +27,40 @@ def test_healthz():
     assert r.status_code == 200 and r.json()["status"] == "ok"
 
 
-def test_readyz_ok(public_db):
-    r = client.get("/readyz")
+def _ready_with(**results):
+    def make(outcome):
+        def check():
+            if outcome != "ok":
+                raise RuntimeError("down: internal detail")
+        return check
+    app.dependency_overrides[get_readiness_checks] = lambda: {k: make(v) for k, v in results.items()}
+
+
+def test_readyz_ok():
+    _ready_with(database="ok", auth="ok", privileged="ok")
+    try:
+        r = client.get("/readyz")
+    finally:
+        app.dependency_overrides.pop(get_readiness_checks, None)
     assert r.status_code == 200
-    assert public_db.ops("public_mines")
+    assert r.json() == {"status": "ready", "checks": {"database": "ok", "auth": "ok", "privileged": "ok"}}
 
 
-def test_readyz_unavailable(public_db):
-    public_db.handler = lambda q: RuntimeError("db down")
-    r = client.get("/readyz")
+@pytest.mark.parametrize("failing", ["database", "auth", "privileged"])
+def test_readyz_fails_if_any_dependency_fails(failing):
+    results = {"database": "ok", "auth": "ok", "privileged": "ok", failing: "down"}
+    _ready_with(**results)
+    try:
+        r = client.get("/readyz")
+    finally:
+        app.dependency_overrides.pop(get_readiness_checks, None)
     assert r.status_code == 503
-    assert r.json() == {"status": "not_ready", "checks": {"database": "unavailable"}}
+    assert r.json()["checks"][failing] == "unavailable"
+    assert "internal detail" not in r.text
+
+
+def test_readyz_default_checks_cover_auth_dependencies():
+    assert set(get_readiness_checks()) == {"database", "auth", "privileged"}
 
 
 def test_security_headers_present():
@@ -113,3 +137,42 @@ def test_public_directory_is_rate_limited(public_db, monkeypatch):
     monkeypatch.setattr(rate_limit.public_limiter, "limit", 2)
     codes = [client.get("/api/v1/laboratories/").status_code for _ in range(3)]
     assert codes == [200, 200, 429]
+
+
+def test_limiter_memory_is_bounded_under_key_churn():
+    limiter = SlidingWindowLimiter(5, 60, max_keys=100)
+    for i in range(5_000):
+        limiter.check(f"client-{i}")
+    assert limiter.tracked_keys() == 100
+
+
+def test_limiter_evicts_least_recently_seen():
+    limiter = SlidingWindowLimiter(1, 60, max_keys=2)
+    limiter.check("a"); limiter.check("b"); limiter.check("a")  # a refreshed, b oldest
+    limiter.check("c")  # evicts b
+    assert limiter.check("a") is not None  # a still tracked and over its limit
+    assert limiter.check("b") is None      # b was evicted, so starts fresh
+
+
+class _Req:
+    def __init__(self, peer, xff=None):
+        self.client = type("C", (), {"host": peer})()
+        self.headers = {"x-forwarded-for": xff} if xff else {}
+
+
+def test_forwarded_header_ignored_without_trusted_proxies():
+    assert client_key(_Req("203.0.113.9", "1.2.3.4"), trusted_proxies=[]) == "203.0.113.9"
+
+
+def test_forwarded_header_ignored_from_untrusted_peer():
+    assert client_key(_Req("203.0.113.9", "1.2.3.4"), trusted_proxies=["10.0.0.0/8"]) == "203.0.113.9"
+
+
+def test_rightmost_untrusted_hop_used_behind_trusted_proxy():
+    # A client tries to spoof "6.6.6.6"; the proxy appended the real client 198.51.100.7.
+    req = _Req("10.0.0.5", "6.6.6.6, 198.51.100.7")
+    assert client_key(req, trusted_proxies=["10.0.0.0/8"]) == "198.51.100.7"
+
+
+def test_malformed_forwarded_header_falls_back_to_peer():
+    assert client_key(_Req("10.0.0.5", "not-an-ip"), trusted_proxies=["10.0.0.0/8"]) == "10.0.0.5"

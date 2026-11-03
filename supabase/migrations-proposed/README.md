@@ -22,6 +22,14 @@ helper ownership, `search_path` and EXECUTE privileges.
 **Limitation:** database owners and superusers can disable triggers or drop the table.
 The audit log is not immutable against them; off-database export is planned.
 
+## 20261104100000_create_organization_with_owner
+One database function that creates an organisation, the caller's owner membership and its
+audit event in a single transaction (all or nothing). `SECURITY DEFINER`, empty `search_path`,
+the acting user is always `auth.uid()`, provider types refused, at most 10 owned organisations
+(serialised per user), `EXECUTE` for `authenticated` only. Requires the consolidated migration.
+Replay: 18 tests (`tests/db/test_org_rpc.py`), including a forced mid-transaction failure that
+leaves no organisation or audit row. Rollback drops the function only.
+
 ## Rollback
 `...ROLLBACK.sql` restores the exact pre-migration schema (verified by schema-dump
 comparison). It refuses to run if audit rows exist (unless
@@ -30,5 +38,6 @@ staff roles are in use.
 
 ## Verification status
 - Local PostgreSQL 16 + PostGIS replay with a Supabase role stand-in: **110/110 passed** (`tests/db`).
-- Real local Supabase stack: **pending** — run `tools/db/local-supabase-stack-test.ps1`.
+- Real local Supabase stack: consolidated migration **passed** (3 Nov 2026); the organisation
+  function is exercised by the stack test's API smoke test.
 - Hosted: **not applied**.

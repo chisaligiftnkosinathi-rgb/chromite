@@ -65,3 +65,18 @@ Read-only audit. Full report: Chromite project doc `claude/phase-1-repository-au
 - Local stack test now also runs `tools/db/api_smoke.py`: two synthetic users, real tokens, RLS through the API.
 - Tests: 266 passed with the replay cluster (3 Git checks skipped outside a repo).
 - Hosted Supabase: not changed. Organisation sign-up there needs the consolidated migration.
+
+## 2026-11-03 — API foundation review fixes
+- CI: test step runs under `shell: bash` with `pipefail`, so a pytest failure can no longer be
+  masked by `tee` (GitHub's default shell does not set pipefail).
+- Organisation creation is one database transaction: proposed migration
+  `20261104100000_create_organization_with_owner` writes organisation, owner membership and
+  audit event together (18 replay tests, including a forced mid-transaction failure).
+- Audit policy documented in `docs/SECURITY_NOTES.md`: data changes audited in-transaction;
+  refused attempts best-effort.
+- `/readyz` now checks database, Supabase Auth and privileged access.
+- Rate limiter memory bounded (10 000 clients per limiter, least-recently-seen eviction).
+- `TRUST_PROXY_HEADERS` replaced by `TRUSTED_PROXIES` (IPs/CIDRs); X-Forwarded-For honoured only
+  from a trusted peer, right-most untrusted hop used; trust-everything ranges rejected.
+- Also commits two seed files left out of the previous commit (`reported_expired` data).
+- Tests: 299 passed with the replay cluster (3 Git checks run in CI).

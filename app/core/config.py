@@ -47,8 +47,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_PUBLIC_PER_MINUTE: int = 120
     # Requests per client per minute on authenticated write endpoints.
     RATE_LIMIT_WRITE_PER_MINUTE: int = 20
-    # Only enable behind a trusted reverse proxy that sets X-Forwarded-For.
-    TRUST_PROXY_HEADERS: bool = False
+    # Reverse proxies (IPs or CIDRs) whose X-Forwarded-For header is believed.
+    # Empty (default) = never trust forwarded headers. JSON list or comma-separated.
+    TRUSTED_PROXIES: Annotated[list[str], NoDecode] = []
 
     # Supabase
     SUPABASE_URL: str
@@ -100,6 +101,32 @@ class Settings(BaseSettings):
             raise ValueError("SUPABASE_KEY cannot be empty")
 
         return value
+
+    @field_validator("TRUSTED_PROXIES", mode="before")
+    @classmethod
+    def parse_trusted_proxies(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return []
+            if text.startswith("["):
+                return json.loads(text)
+            return [part.strip() for part in text.split(",") if part.strip()]
+        return value
+
+    @field_validator("TRUSTED_PROXIES")
+    @classmethod
+    def validate_trusted_proxies(cls, entries: list[str]) -> list[str]:
+        import ipaddress
+
+        for entry in entries:
+            try:
+                network = ipaddress.ip_network(entry, strict=False)
+            except ValueError as exc:
+                raise ValueError(f"Invalid TRUSTED_PROXIES entry: {entry}") from exc
+            if network.prefixlen == 0:
+                raise ValueError("TRUSTED_PROXIES must not trust every address")
+        return entries
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

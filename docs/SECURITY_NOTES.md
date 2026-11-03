@@ -23,11 +23,26 @@
 | ZIP disposition | Kept in place, git-ignored, pending the owner's decision. To delete after rotation: `Remove-Item .\chromite-backend-review.zip` |
 | Status | **OPEN** until rotation is confirmed or the owner records that the file never left the machine *and* accepts the cloud-workspace copy above. |
 
+## Audit policy
+- **Changes to data are audited in the same database transaction as the change**, through a
+  database function (first: `create_organization_with_owner`). If the audit row cannot be
+  written, the change is rolled back too. New write workflows follow this pattern.
+- **Refused attempts** (permission denied, invalid input) leave no row in a rolled-back
+  transaction, so the API records them best-effort with the privileged client. If that fails,
+  an ERROR log line with the request ID is written; the refusal itself still stands.
+- `/readyz` reports not-ready when the privileged client cannot reach the database, so a
+  deployment without working audit access is not put into service.
+- Limit: database owners and superusers can still disable triggers; off-database export planned.
+
+## Client identity behind proxies
+`X-Forwarded-For` is ignored unless the socket peer is listed in `TRUSTED_PROXIES`; then the
+right-most address that is not a trusted proxy is used. `0.0.0.0/0` and `::/0` are rejected.
+
 ## Known outstanding risks (Phase 0 exit)
 1. Hosted database permission defects (public views, onboarding) — fix drafted in
    `supabase/migrations-proposed/`, pending local-stack test and approval.
 2. No authorisation layer beyond token verification yet (Phase 2+).
-3. No rate limiting (planned with auth workflows).
+3. Rate limiting is in-memory per process (bounded to 10 000 clients per limiter); use a shared store before running several instances.
 4. No private Storage buckets / signed URLs yet (Phase 4/8).
 5. Audit log not immutable against database owners/superusers; off-database export planned.
 6. Self-declared organisation types must never grant provider rights (enforced from Phase 5).

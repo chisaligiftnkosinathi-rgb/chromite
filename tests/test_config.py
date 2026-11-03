@@ -69,3 +69,14 @@ def test_blank_supabase_key_rejected(monkeypatch):
 def test_secrets_are_masked_in_repr(monkeypatch):
     s = make(monkeypatch, SUPABASE_KEY="placeholder-value-123")
     assert "placeholder-value-123" not in repr(s)
+
+
+def test_trusted_proxies_parse(monkeypatch):
+    s = make(monkeypatch, TRUSTED_PROXIES="10.0.0.0/8, 192.168.1.10")
+    assert s.TRUSTED_PROXIES == ["10.0.0.0/8", "192.168.1.10"]
+
+
+@pytest.mark.parametrize("value", ["0.0.0.0/0", "::/0", "not-an-ip"])
+def test_unsafe_trusted_proxies_rejected(monkeypatch, value):
+    with pytest.raises(ValidationError):
+        make(monkeypatch, TRUSTED_PROXIES=value)

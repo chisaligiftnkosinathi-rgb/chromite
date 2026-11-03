@@ -52,10 +52,16 @@ jobs:
       - name: Show PostgreSQL client version
         run: pg_dump --version
 
+      # shell: bash runs with -eo pipefail, so a pytest failure fails this step
+      # even though its output is piped through tee.
       - name: Run the full test suite
-        run: python -m pytest -q -rfEs 2>&1 | tee pytest.log
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -q -rfEs 2>&1 | tee pytest.log
 
       - name: Fail if any test was skipped
+        shell: bash
         run: |
           if grep -Eq "[0-9]+ skipped" pytest.log; then
             echo "Some tests were skipped in CI; every test must run here."

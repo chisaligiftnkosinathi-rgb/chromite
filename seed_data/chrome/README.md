@@ -7,7 +7,7 @@ each one before it can be published.
 | File | Records | Imported as |
 | --- | --- | --- |
 | `mines.pilot.json` | 9 mines (5 importable, 4 held back: source gives no province) | `draft` / `pending` |
-| `laboratories.candidates.json` | 8 laboratories; 5 accreditation claims (3 say accredited, 2 say accreditation is being pursued) | `draft` / `unverified`, no accreditation scope rows |
+| `laboratories.candidates.json` | 8 laboratories; 5 accreditation claims (2 say accredited, 2 say accreditation is being pursued, 1 reported expired) | `draft` / `unverified`, no accreditation scope rows |
 
 ## Rules for adding records
 - Every record cites a source opened by a person: name, https URL, date checked, kind
@@ -16,7 +16,7 @@ each one before it can be published.
 - A mine listing is not proof of a mining right, current operation or production. Legal-right
   information goes in `legal_right_leads` until verified against official records.
 - A laboratory is never marked accredited from a seed. Claims go in `accreditation_claims` with
-  `status: "unverified"` and a `claim_type` (`states_accredited` or `pursuing_accreditation`); accreditation is verified per test against the current SANAS schedule
+  `status: "unverified"` and a `claim_type` (`states_accredited`, `pursuing_accreditation` or `reported_expired`); accreditation is verified per test against the current SANAS schedule
   (facility number, certificate validity, scope revision, analyte, method, material, site).
 - Government directories: confirm the reuse terms before copying their data into a commercial product.
   These pilot files use company and published sources only.

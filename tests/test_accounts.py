@@ -25,8 +25,7 @@ class World:
     def __init__(self):
         self.memberships = []
         self.staff = []
-        self.org_insert_error = None
-        self.membership_insert_error = None
+        self.rpc_error = None
         self.orgs = [ORG_ROW]
         self.user_db = FakeClient(self._user)
         self.admin_db = FakeClient(self._admin)
@@ -34,10 +33,11 @@ class World:
     def _user(self, q):
         if q.table == "organization_memberships" and q.op == "select":
             return self.memberships
-        if q.table == "organization_memberships" and q.op == "insert":
-            return self.membership_insert_error or []
-        if q.table == "organizations" and q.op == "insert":
-            return self.org_insert_error or [{**ORG_ROW, **q.payload, "id": ORG_A}]
+        if q.table == "create_organization_with_owner" and q.op == "rpc":
+            if self.rpc_error:
+                return self.rpc_error
+            return {**ORG_ROW, "organization_name": q.payload["p_organization_name"],
+                    "organization_type": q.payload["p_organization_type"]}
         if q.table == "organizations" and q.op == "select":
             return self.orgs
         raise AssertionError(f"unexpected user query {q.table} {q.op}")
@@ -45,7 +45,7 @@ class World:
     def _admin(self, q):
         if q.table == "platform_staff":
             return self.staff
-        if q.table in ("platform_audit_logs", "organizations"):
+        if q.table == "platform_audit_logs":
             return []
         raise AssertionError(f"unexpected admin query {q.table}")
 
@@ -125,25 +125,28 @@ def test_membership_lookup_denied_is_403(world):
 
 # ---- organisations --------------------------------------------------------------
 
-def test_create_organisation_makes_caller_owner(world):
+def test_create_uses_single_atomic_function(world):
     r = client.post("/api/v1/organizations/", headers=AUTH,
                     json={"organization_name": "SYNTHETIC ORG", "organization_type": "customer"})
     assert r.status_code == 201 and r.json()["my_role"] == "owner"
-    org_insert = world.user_db.ops("organizations", "insert")[0]
-    assert org_insert.payload["created_by"] == str(USER.user_id)
-    member_insert = world.user_db.ops("organization_memberships", "insert")[0]
-    assert member_insert.payload == {"organization_id": ORG_A, "user_id": str(USER.user_id),
-                                     "membership_role": "owner"}
-    audit = world.admin_db.ops("platform_audit_logs", "insert")[0].payload
-    assert audit["action"] == "organization.create" and audit["outcome"] == "success"
-    assert "test-token" not in str(audit)
+    calls = world.user_db.ops("create_organization_with_owner", "rpc")
+    assert len(calls) == 1
+    params = calls[0].payload
+    assert params["p_organization_name"] == "SYNTHETIC ORG"
+    assert params["p_request_id"] == r.headers["x-request-id"]
+    # No separate table writes, and no user id is sent: the database uses auth.uid().
+    assert not world.user_db.ops("organizations", "insert")
+    assert not world.user_db.ops("organization_memberships", "insert")
+    assert all("user" not in k for k in params)
+    # Success is audited inside the transaction, not by the API.
+    assert not world.admin_db.ops("platform_audit_logs", "insert")
 
 
 def test_personal_account_is_single_member_customer_org(world):
     r = client.post("/api/v1/organizations/", headers=AUTH,
                     json={"organization_name": "Synthetic Person (personal)"})
     assert r.status_code == 201
-    assert world.user_db.ops("organizations", "insert")[0].payload["organization_type"] == "customer"
+    assert world.user_db.ops("create_organization_with_owner", "rpc")[0].payload["p_organization_type"] == "customer"
 
 
 @pytest.mark.parametrize("org_type", ["laboratory", "sampling_provider", "platform"])
@@ -151,7 +154,7 @@ def test_provider_types_cannot_be_self_declared(world, org_type):
     r = client.post("/api/v1/organizations/", headers=AUTH,
                     json={"organization_name": "X Labs", "organization_type": org_type})
     assert r.status_code == 422
-    assert not world.user_db.ops("organizations", "insert")
+    assert not world.user_db.log or not world.user_db.ops("create_organization_with_owner")
 
 
 @pytest.mark.parametrize("extra", [{"created_by": "someone-else"}, {"id": ORG_B}])
@@ -167,28 +170,27 @@ def test_invalid_names_rejected(world, name):
                        json={"organization_name": name}).status_code == 422
 
 
-def test_rls_refusal_on_create_is_403_and_audited(world):
-    world.org_insert_error = api_error("42501", "new row violates row-level security policy")
+@pytest.mark.parametrize("code,hint,expected", [
+    ("42501", None, 403),
+    ("22023", None, 422),
+    ("P0001", "owner_limit", 409),
+    ("PGRST202", None, 503),   # function missing (migration not applied)
+])
+def test_database_refusals_mapped_and_audited(world, code, hint, expected):
+    err = api_error(code, "internal database message")
+    err.hint = hint
+    world.rpc_error = err
     r = client.post("/api/v1/organizations/", headers=AUTH, json={"organization_name": "SYNTHETIC ORG"})
-    assert r.status_code == 403 and "row-level" not in r.text
-    assert world.admin_db.ops("platform_audit_logs", "insert")[0].payload["outcome"] == "denied"
+    assert r.status_code == expected and "internal database message" not in r.text
+    denied = world.admin_db.ops("platform_audit_logs", "insert")[0].payload
+    assert denied["outcome"] == "denied" and denied["metadata"]["code"] == code
 
 
-def test_failed_owner_membership_removes_orphan_and_audits(world):
-    world.membership_insert_error = api_error("42P17", "infinite recursion detected in policy")
+def test_unexpected_function_result_is_503(world):
+    world.rpc_error = None
+    world.user_db.handler = lambda q: [] if q.op == "select" else None
     r = client.post("/api/v1/organizations/", headers=AUTH, json={"organization_name": "SYNTHETIC ORG"})
-    assert r.status_code == 503 and "recursion" not in r.text
-    deletes = world.admin_db.ops("organizations", "delete")
-    assert len(deletes) == 1 and ("eq", "id", ORG_A) in deletes[0].calls
-    audit = world.admin_db.ops("platform_audit_logs", "insert")[0].payload
-    assert audit["outcome"] == "failure" and audit["metadata"]["orphan_removed"] is True
-
-
-def test_owner_cap_enforced(world):
-    world.memberships = [{"organization_id": f"bbbbbbbb-0000-4000-8000-{i:012d}", "membership_role": "owner"}
-                         for i in range(10)]
-    r = client.post("/api/v1/organizations/", headers=AUTH, json={"organization_name": "One too many"})
-    assert r.status_code == 409
+    assert r.status_code == 503
 
 
 def test_create_is_rate_limited(world, monkeypatch):

@@ -120,7 +120,7 @@
       "accreditation_claims": [
         {
           "claim": "Lead from the owner's notes of 3 November 2026: SANAS T0658, with a schedule covering chromium ore and concentrate determinations, and a certificate copy stating expiry on 29 October 2025. Not examined in this research; the company page itself states no accreditation.",
-          "claim_type": "states_accredited",
+          "claim_type": "reported_expired",
           "accreditation_body": "SANAS",
           "accreditation_number_claimed": "T0658",
           "claimed_by": "third_party",

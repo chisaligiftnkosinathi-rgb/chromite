@@ -51,5 +51,11 @@ class FakeClient:
     def table(self, name):
         return FakeQuery(self, name)
 
+    def rpc(self, name, params=None):
+        q = FakeQuery(self, name)
+        q.op, q.payload = "rpc", params
+        q.calls.append(("rpc", name, params))
+        return q
+
     def ops(self, table=None, op=None):
         return [q for q in self.log if (table is None or q.table == table) and (op is None or q.op == op)]

@@ -25,7 +25,8 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $Migrations = @(
     'supabase\migrations\20261103142214_initial_chromite_schema.sql',
     'supabase\migrations\20261103170000_chromite_least_privilege_permissions.sql',
-    'supabase\migrations-proposed\20261104090000_consolidated_grants_rls_superadmin_audit.sql'
+    'supabase\migrations-proposed\20261104090000_consolidated_grants_rls_superadmin_audit.sql',
+    'supabase\migrations-proposed\20261104100000_create_organization_with_owner.sql'
 )
 $Rollback = 'supabase\migrations-proposed\20261104090000_consolidated_grants_rls_superadmin_audit.ROLLBACK.sql'
 $Forward  = $Migrations[2]
@@ -79,7 +80,7 @@ try {
     [IO.File]::WriteAllText($cfgPath, $cfg)   # UTF-8 without BOM
     Write-Host 'Local ports: API 55321, DB 55322 (defaults + 1000); Studio and Analytics disabled'
 
-    Step 'supabase start (applies the 3 migrations to the local database)'
+    Step 'supabase start (applies the 4 migrations to the local database)'
     & $Cli start | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'supabase start failed' }
     $started = $true
