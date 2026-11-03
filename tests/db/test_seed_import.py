@@ -62,27 +62,43 @@ def test_reimport_is_idempotent(db):
     _import(db)
     second = _import(db)
     assert second.counts()["mines_inserted"] == 0
-    assert second.counts()["mines_updated"] == 5
+    assert second.counts()["mines_existing_unchanged"] == 5
     assert second.counts()["labs_inserted"] == 0
+    assert second.counts()["labs_existing_unchanged"] == 8
     with db.owner() as c:
         assert c.execute("SELECT count(*) FROM public.mines WHERE slug = 'tharisa-mine'").fetchone()[0] == 1
         assert c.execute("SELECT count(*) FROM public.laboratories WHERE laboratory_name LIKE 'AHK%'").fetchone()[0] == 3
 
 
-def test_reviewer_decisions_are_preserved(db):
+def test_reviewer_status_changes_are_preserved(db):
     _import(db)
     with db.owner() as c:
-        c.execute("UPDATE public.mines SET verification_status = 'verified', public_description = 'Reviewed'"
-                  " WHERE slug = 'tharisa-mine'")
+        c.execute("UPDATE public.mines SET verification_status = 'verified' WHERE slug = 'tharisa-mine'")
         c.execute("UPDATE public.laboratories SET verification_status = 'pending'"
                   " WHERE laboratory_name LIKE 'Cotecna%'")
-    second = _import(db)
-    assert "tharisa-mine" in second.mines_preserved
-    assert any(n.startswith("Cotecna") for n in second.labs_preserved)
+    _import(db)
     with db.owner() as c:
-        row = c.execute("SELECT verification_status, public_description FROM public.mines"
-                        " WHERE slug = 'tharisa-mine'").fetchone()
-    assert row == ("verified", "Reviewed")
+        assert c.execute("SELECT verification_status FROM public.mines WHERE slug = 'tharisa-mine'").fetchone()[0] == "verified"
+        assert c.execute("SELECT verification_status FROM public.laboratories"
+                         " WHERE laboratory_name LIKE 'Cotecna%'").fetchone()[0] == "pending"
+
+
+def test_reviewer_edits_without_status_change_are_preserved(db):
+    """The gap found in review: a draft edited by a reviewer must survive re-import."""
+    _import(db)
+    with db.owner() as c:
+        c.execute("UPDATE public.mines SET public_description = 'Reviewer wording', nearest_town = 'Marikana'"
+                  " WHERE slug = 'samancor-mooinooi'")
+        c.execute("UPDATE public.laboratories SET physical_address = 'Reviewer address'"
+                  " WHERE laboratory_name = 'IMEC Laboratory Services'")
+    second = _import(db)
+    assert "samancor-mooinooi" in second.mines_existing
+    with db.owner() as c:
+        assert c.execute("SELECT public_description, nearest_town, publication_status, verification_status"
+                         " FROM public.mines WHERE slug = 'samancor-mooinooi'").fetchone() == \
+            ("Reviewer wording", "Marikana", "draft", "pending")
+        assert c.execute("SELECT physical_address FROM public.laboratories"
+                         " WHERE laboratory_name = 'IMEC Laboratory Services'").fetchone()[0] == "Reviewer address"
 
 
 def test_verification_queue_lists_every_claim(db):

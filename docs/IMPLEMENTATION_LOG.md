@@ -34,9 +34,19 @@ Read-only audit. Full report: Chromite project doc `claude/phase-1-repository-au
 ## 2026-11-03 — Chrome seed pilot (local only)
 - `seed_data/chrome/`: 9 candidate mines (5 importable, 4 held back for missing province) and
   8 candidate laboratories, every record citing a source checked on 3 Nov 2026.
-- No laboratory is marked accredited; 3 accreditation claims (T0974, T0658, AHK Richards Bay)
-  are queued as unverified. No accreditation scope or mining-right rows are created.
+- No laboratory is marked accredited; 5 accreditation claims are queued as unverified (3 say
+  accredited: T0974, T0658 lead, AHK Richards Bay; 2 say accreditation is being pursued). No accreditation scope or mining-right rows are created.
 - `app/seeding/`: validated models and an importer that refuses non-local databases, dry-runs by
   default, imports drafts only, never overwrites reviewed records, and writes an audit event.
-- Tests: 26 model tests, 6 database tests (replay cluster). Full suite 198 passed.
+- Tests at first commit: 26 model + 6 database tests; 198 passed with the replay cluster,
+  85 passed / 116 skipped on Windows without it.
 - Hosted Supabase: not changed.
+
+## 2026-11-03 — Seed pilot review fixes
+- Importer is now insert-only: existing records are never modified, so reviewer edits survive
+  re-runs (the previous upsert overwrote edits that left statuses unchanged; reproduced, then fixed).
+- DSN hardening: explicit local host required; `service=`, `servicefile=`, `hostaddr=` and
+  PGHOSTADDR/PGSERVICE/PGSERVICEFILE refused; the connected address is re-checked after connecting.
+- Claims carry `claim_type` (`states_accredited` / `pursuing_accreditation`).
+- Local Supabase stack test now also runs the importer (dry run, apply, re-run) and checks the result.
+- Tests: 214 passed with the replay cluster; 97 passed / 120 skipped without it (outside Git).

@@ -20,6 +20,7 @@
       "accreditation_claims": [
         {
           "claim": "SANAS accreditation T0974 granted 4 March 2022 for chemical analysis to ISO/IEC 17025:2017; accredited reports for coal, manganese, iron ore and chrome within the SANAS scope.",
+          "claim_type": "states_accredited",
           "accreditation_body": "SANAS",
           "accreditation_number_claimed": "T0974",
           "claimed_by": "laboratory",
@@ -44,6 +45,7 @@
       "accreditation_claims": [
         {
           "claim": "Laboratory accredited to SANAS ISO 17025:2017 for several commodities including chrome ore/concentrate. No accreditation number given.",
+          "claim_type": "states_accredited",
           "accreditation_body": "SANAS",
           "accreditation_number_claimed": null,
           "claimed_by": "laboratory",
@@ -68,6 +70,7 @@
       "accreditation_claims": [
         {
           "claim": "In February 2025 the laboratory was acquiring accreditation for chrome ore/concentrate and ferrochrome methods (chrome by titration, impurities by ICP-OES). Not stated as accredited.",
+          "claim_type": "pursuing_accreditation",
           "accreditation_body": "SANAS",
           "accreditation_number_claimed": null,
           "claimed_by": "laboratory",
@@ -92,6 +95,7 @@
       "accreditation_claims": [
         {
           "claim": "In February 2025 the laboratory was acquiring ISO 17025:2017 accreditation for chrome ore, concentrate and slag methods (chrome by titration, impurities by ICP-OES). Not stated as accredited.",
+          "claim_type": "pursuing_accreditation",
           "accreditation_body": "SANAS",
           "accreditation_number_claimed": null,
           "claimed_by": "laboratory",
@@ -116,6 +120,7 @@
       "accreditation_claims": [
         {
           "claim": "Lead from the owner's notes of 3 November 2026: SANAS T0658, with a schedule covering chromium ore and concentrate determinations, and a certificate copy stating expiry on 29 October 2025. Not examined in this research; the company page itself states no accreditation.",
+          "claim_type": "states_accredited",
           "accreditation_body": "SANAS",
           "accreditation_number_claimed": "T0658",
           "claimed_by": "third_party",

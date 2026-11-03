@@ -1,16 +1,18 @@
 """Import the chrome pilot seed datasets into a LOCAL Chromite database.
 
 Safety rules (enforced in code):
-- Only local databases: host must be localhost, 127.0.0.1, ::1 or a Unix socket.
-  Any Supabase-hosted address is refused. There is no override flag.
+- Only local databases. The DSN must name its host explicitly (localhost,
+  127.0.0.1, ::1 or a Unix socket); service files, PGHOSTADDR/PGSERVICE and any
+  Supabase-hosted address are refused, and after connecting the actual server
+  address is checked again. There is no override flag.
 - Dry run by default: everything runs inside a transaction that is rolled back.
   Pass --apply to commit.
 - Records are always imported as unpublished drafts. Mines are marked
   'pending' verification; laboratories 'unverified'. Nothing is published,
   verified or marked accredited, and no accreditation scope rows are created.
-- Re-running is safe: mines match on slug, laboratories on name + city. A record
-  a reviewer has already touched (published, or verification changed) is never
-  overwritten.
+- Insert-only: mines match on slug, laboratories on name + city. A record that
+  already exists is never modified, whoever last edited it, so a reviewer's work
+  cannot be overwritten. Updating a source on an existing record is a reviewer task.
 - When the audit table exists, one 'seed.import' audit event is written.
 
 Usage (PowerShell, local Supabase stack from tools/db/local-supabase-stack-test.ps1
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,7 +37,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MINES = REPO_ROOT / "seed_data" / "chrome" / "mines.pilot.json"
 DEFAULT_LABS = REPO_ROOT / "seed_data" / "chrome" / "laboratories.candidates.json"
 
-LOCAL_HOSTS = {"", "localhost", "127.0.0.1", "::1"}
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 FORBIDDEN_FRAGMENTS = ("supabase.co", "supabase.com", "pooler.")
 
 
@@ -42,8 +45,18 @@ class UnsafeTargetError(RuntimeError):
     """Raised when the target database is not demonstrably local."""
 
 
-def assert_local_dsn(dsn: str) -> None:
+REFUSED_KEYS = ("service", "servicefile", "hostaddr")
+REFUSED_ENV = ("PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE")
+
+
+def assert_local_dsn(dsn: str, environ: dict | None = None) -> None:
+    """Refuse anything that is not demonstrably a local database."""
     from psycopg.conninfo import conninfo_to_dict
+
+    env = os.environ if environ is None else environ
+    for name in REFUSED_ENV:
+        if env.get(name):
+            raise UnsafeTargetError(f"refusing to run with {name} set; it can redirect the connection")
 
     try:
         parts = conninfo_to_dict(dsn)
@@ -54,13 +67,29 @@ def assert_local_dsn(dsn: str) -> None:
     if any(fragment in lowered for fragment in FORBIDDEN_FRAGMENTS):
         raise UnsafeTargetError("refusing a Supabase-hosted address; seeds are local-only")
 
-    for key in ("host", "hostaddr"):
-        for host in str(parts.get(key, "")).split(","):
-            host = host.strip()
-            if host.startswith("/"):
-                continue  # Unix socket
-            if host not in LOCAL_HOSTS:
-                raise UnsafeTargetError(f"refusing non-local {key} {host!r}; seeds are local-only")
+    for key in REFUSED_KEYS:
+        if key in parts:
+            raise UnsafeTargetError(f"refusing '{key}=' in the DSN; name a local host explicitly")
+
+    hosts = [h.strip() for h in str(parts.get("host", "")).split(",") if h.strip()]
+    if not hosts:
+        raise UnsafeTargetError("the DSN must name its host explicitly (e.g. host=127.0.0.1)")
+    for host in hosts:
+        if host.startswith("/"):
+            continue  # Unix socket
+        if host not in LOCAL_HOSTS:
+            raise UnsafeTargetError(f"refusing non-local host {host!r}; seeds are local-only")
+
+
+def assert_connected_locally(conn) -> None:
+    """Second check, after connecting: the address libpq actually used must be local."""
+    info = conn.info
+    host = info.host or ""
+    addr = getattr(info, "hostaddr", "") or ""
+    if host.startswith("/") and not addr:
+        return  # Unix socket
+    if host not in LOCAL_HOSTS or (addr and addr not in {"127.0.0.1", "::1"}):
+        raise UnsafeTargetError(f"connected to non-local server (host {host!r}, address {addr!r})")
 
 
 def load_datasets(mines_path: Path = DEFAULT_MINES, labs_path: Path = DEFAULT_LABS):
@@ -73,29 +102,25 @@ def load_datasets(mines_path: Path = DEFAULT_MINES, labs_path: Path = DEFAULT_LA
 class ImportReport:
     applied: bool = False
     mines_inserted: list[str] = field(default_factory=list)
-    mines_updated: list[str] = field(default_factory=list)
-    mines_preserved: list[str] = field(default_factory=list)
+    mines_existing: list[str] = field(default_factory=list)
     mines_held_back: list[tuple[str, list[str]]] = field(default_factory=list)
     labs_inserted: list[str] = field(default_factory=list)
-    labs_updated: list[str] = field(default_factory=list)
-    labs_preserved: list[str] = field(default_factory=list)
+    labs_existing: list[str] = field(default_factory=list)
     verification_queue: list[str] = field(default_factory=list)
     audit_written: bool = False
 
     def counts(self) -> dict[str, int]:
         return {
             "mines_inserted": len(self.mines_inserted),
-            "mines_updated": len(self.mines_updated),
-            "mines_preserved": len(self.mines_preserved),
+            "mines_existing_unchanged": len(self.mines_existing),
             "mines_held_back": len(self.mines_held_back),
             "labs_inserted": len(self.labs_inserted),
-            "labs_updated": len(self.labs_updated),
-            "labs_preserved": len(self.labs_preserved),
+            "labs_existing_unchanged": len(self.labs_existing),
             "verification_items": len(self.verification_queue),
         }
 
 
-_MINE_UPSERT = """
+_MINE_INSERT = """
 INSERT INTO public.mines (
     slug, mine_name, province, district, nearest_town, latitude, longitude,
     mine_type, operating_status, publication_status, verification_status,
@@ -106,23 +131,8 @@ INSERT INTO public.mines (
     'draft', 'pending', %(public_description)s, %(source_name)s, %(source_url)s,
     %(source_reference)s, %(source_checked_at)s
 )
-ON CONFLICT (slug) DO UPDATE SET
-    mine_name = EXCLUDED.mine_name,
-    province = EXCLUDED.province,
-    district = EXCLUDED.district,
-    nearest_town = EXCLUDED.nearest_town,
-    latitude = EXCLUDED.latitude,
-    longitude = EXCLUDED.longitude,
-    mine_type = EXCLUDED.mine_type,
-    operating_status = EXCLUDED.operating_status,
-    public_description = EXCLUDED.public_description,
-    source_name = EXCLUDED.source_name,
-    source_url = EXCLUDED.source_url,
-    source_reference = EXCLUDED.source_reference,
-    source_checked_at = EXCLUDED.source_checked_at
-WHERE public.mines.publication_status = 'draft'
-  AND public.mines.verification_status IN ('unverified', 'pending')
-RETURNING (xmax = 0) AS inserted
+ON CONFLICT (slug) DO NOTHING
+RETURNING id
 """
 
 
@@ -140,7 +150,7 @@ def _import_mines(cur, dataset: MineDataset, report: ImportReport) -> None:
             )
             continue
         cur.execute(
-            _MINE_UPSERT,
+            _MINE_INSERT,
             {
                 "slug": mine.slug,
                 "mine_name": mine.mine_name,
@@ -158,13 +168,10 @@ def _import_mines(cur, dataset: MineDataset, report: ImportReport) -> None:
                 "source_checked_at": mine.source.checked_at,
             },
         )
-        row = cur.fetchone()
-        if row is None:
-            report.mines_preserved.append(mine.slug)
-        elif row[0]:
-            report.mines_inserted.append(mine.slug)
+        if cur.fetchone() is None:
+            report.mines_existing.append(mine.slug)
         else:
-            report.mines_updated.append(mine.slug)
+            report.mines_inserted.append(mine.slug)
         for lead in mine.legal_right_leads:
             report.verification_queue.append(f"mine {mine.slug}: legal-right lead: {lead}")
         report.verification_queue.append(
@@ -186,14 +193,15 @@ def _import_labs(cur, dataset: LaboratoryDataset, report: ImportReport) -> None:
             "source_checked_at": lab.source.checked_at,
         }
         cur.execute(
-            "SELECT id, publication_status, verification_status FROM public.laboratories"
+            "SELECT 1 FROM public.laboratories"
             " WHERE lower(laboratory_name) = lower(%(laboratory_name)s)"
             " AND lower(coalesce(city, '')) = lower(coalesce(%(city)s, ''))"
-            " ORDER BY created_at LIMIT 1",
+            " LIMIT 1",
             values,
         )
-        existing = cur.fetchone()
-        if existing is None:
+        if cur.fetchone() is not None:
+            report.labs_existing.append(name)
+        else:
             cur.execute(
                 "INSERT INTO public.laboratories (laboratory_name, country_code, province, city,"
                 " physical_address, website_url, publication_status, verification_status,"
@@ -204,21 +212,12 @@ def _import_labs(cur, dataset: LaboratoryDataset, report: ImportReport) -> None:
                 values,
             )
             report.labs_inserted.append(name)
-        elif existing[1] == "draft" and existing[2] == "unverified":
-            cur.execute(
-                "UPDATE public.laboratories SET province = %(province)s,"
-                " physical_address = %(physical_address)s, website_url = %(website_url)s,"
-                " source_name = %(source_name)s, source_url = %(source_url)s,"
-                " source_checked_at = %(source_checked_at)s WHERE id = %(id)s",
-                {**values, "id": existing[0]},
-            )
-            report.labs_updated.append(name)
-        else:
-            report.labs_preserved.append(name)
         for claim in lab.accreditation_claims:
             number = claim.accreditation_number_claimed or "no number given"
+            kind = ("says accredited" if claim.claim_type == "states_accredited"
+                    else "says accreditation is being pursued")
             report.verification_queue.append(
-                f"lab {name}: check SANAS schedule ({number}); claim by {claim.claimed_by}: {claim.claim}"
+                f"lab {name}: {kind} ({claim.claimed_by}, {number}); check the SANAS schedule: {claim.claim}"
             )
         if not lab.accreditation_claims:
             report.verification_queue.append(
@@ -227,9 +226,12 @@ def _import_labs(cur, dataset: LaboratoryDataset, report: ImportReport) -> None:
 
 
 def run_import(conn, mines: MineDataset, labs: LaboratoryDataset, apply: bool) -> ImportReport:
+    assert_connected_locally(conn)
     report = ImportReport(applied=apply)
     with conn.transaction(force_rollback=not apply):
         with conn.cursor() as cur:
+            # One importer at a time; prevents duplicate laboratories from parallel runs.
+            cur.execute("LOCK TABLE public.laboratories IN SHARE ROW EXCLUSIVE MODE")
             _import_mines(cur, mines, report)
             _import_labs(cur, labs, report)
             cur.execute("SELECT to_regclass('public.platform_audit_logs') IS NOT NULL")
