@@ -1,9 +1,10 @@
-
-from typing import Literal
+import json
+import os
+from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
 
 from pydantic import SecretStr, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -33,7 +34,9 @@ class Settings(BaseSettings):
     ] = "INFO"
 
     # Security / browser access
-    CORS_ORIGINS: list[str] = []
+    # Accepts a JSON list ('["https://a.example"]') or a comma-separated
+    # string ('https://a.example,https://b.example').
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = []
 
     CORS_ALLOW_CREDENTIALS: bool = True
 
@@ -50,7 +53,8 @@ class Settings(BaseSettings):
     DATABASE_URL: SecretStr | None = None
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # CHROMITE_ENV_FILE lets tests point away from the real .env.
+        env_file=os.environ.get("CHROMITE_ENV_FILE", ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -84,6 +88,30 @@ class Settings(BaseSettings):
     def validate_supabase_key(cls, value: SecretStr) -> SecretStr:
         if not value.get_secret_value().strip():
             raise ValueError("SUPABASE_KEY cannot be empty")
+
+        return value
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            text = value.strip()
+
+            if not text:
+                return []
+
+            if text.startswith("["):
+                try:
+                    parsed = json.loads(text)
+                except json.JSONDecodeError as exc:
+                    raise ValueError("CORS_ORIGINS is not valid JSON") from exc
+
+                if not isinstance(parsed, list):
+                    raise ValueError("CORS_ORIGINS JSON must be a list")
+
+                return parsed
+
+            return [part for part in text.split(",")]
 
         return value
 
@@ -133,6 +161,12 @@ class Settings(BaseSettings):
                     "Explicit CORS_ORIGINS are required in production "
                     "when credentials are enabled"
                 )
+
+        if self.CORS_ALLOW_CREDENTIALS and "*" in self.CORS_ORIGINS:
+            raise ValueError(
+                "Wildcard CORS origins cannot be combined with "
+                "CORS_ALLOW_CREDENTIALS=true"
+            )
 
         return self
 

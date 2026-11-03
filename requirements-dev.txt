@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest==9.1.1
+# Only needed for tests/db (local PostgreSQL replay); skipped when absent.
+psycopg[binary]==3.3.7

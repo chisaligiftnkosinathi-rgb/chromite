@@ -1,0 +1,23 @@
+#!/bin/sh
+# Chromite pre-commit guard: blocks private paths and secret-looking content.
+# Enabled with: git config core.hooksPath .githooks
+
+blocked=$(git diff --cached --name-only --diff-filter=ACMR \
+  | grep -E '(^|/)\.env($|\.)|\.zip$|\.backup$|(^|/)supabase/\.temp/|(^|/)supabase/\.branches/|^data/|^records/|^_archive/|^\.phase0-baseline/|^node_modules/|^\.venv/|chromite_structure\.txt$' \
+  | grep -vE '(^|/)\.env\.example$')
+
+if [ -n "$blocked" ]; then
+  echo "pre-commit: refusing to commit private paths:" >&2
+  echo "$blocked" >&2
+  exit 1
+fi
+
+if git diff --cached --diff-filter=ACMR -U0 \
+  | grep -E '^\+' \
+  | grep -qE 'sb_(secret|publishable)_[A-Za-z0-9_-]{16,}|eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|postgres(ql)?://[^:/@[:space:]]+:[^@[:space:]]{3,}@'; then
+  echo "pre-commit: possible secret detected in staged changes; commit refused." >&2
+  echo "Inspect with: git diff --cached" >&2
+  exit 1
+fi
+
+exit 0

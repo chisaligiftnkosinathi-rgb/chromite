@@ -1,6 +1,5 @@
-
 import logging
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from postgrest.exceptions import APIError
@@ -12,6 +11,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Values allowed by the mines.operating_status CHECK constraint.
+OperatingStatus = Literal[
+    "operating",
+    "care_and_maintenance",
+    "temporarily_closed",
+    "closed",
+    "under_development",
+    "unknown",
+]
+
+# Letters, spaces, hyphens and apostrophes only (e.g. "KwaZulu-Natal").
+# This excludes the LIKE/PostgREST wildcards %, _ and *.
+PROVINCE_PATTERN = r"^[A-Za-z][A-Za-z '\-]{1,49}$"
+
 
 @router.get(
     "/",
@@ -19,8 +32,10 @@ router = APIRouter()
     summary="Get published chrome mines",
 )
 def get_mines(
-    province: Optional[str] = Query(default=None, min_length=2),
-    operating_status: Optional[str] = None,
+    province: Optional[str] = Query(
+        default=None, min_length=2, max_length=50, pattern=PROVINCE_PATTERN
+    ),
+    operating_status: Optional[OperatingStatus] = None,
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ):
@@ -35,10 +50,7 @@ def get_mines(
             query = query.ilike("province", province.strip())
 
         if operating_status:
-            query = query.eq(
-                "operating_status",
-                operating_status.strip(),
-            )
+            query = query.eq("operating_status", operating_status)
 
         result = (
             query
