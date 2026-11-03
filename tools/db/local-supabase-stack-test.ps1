@@ -119,6 +119,36 @@ try {
     Write-Host 'PASS: rollback restored pre-migration permissions'
     Psql $Forward 'postgres'
     Psql $Probe
+
+    Step 'Seed importer on the real stack: dry run, apply, then re-run (must insert nothing)'
+    $py = Join-Path $RepoRoot '.venv\Scripts\python.exe'
+    if (-not (Test-Path $py)) { throw "Python virtual environment not found at $py" }
+    $dsn = 'host=127.0.0.1 port=55322 user=postgres dbname=postgres'
+    $env:PGPASSWORD = 'postgres'   # this throwaway local stack's default password only
+    Push-Location $RepoRoot
+    try {
+        foreach ($args2 in @(@(), @('--apply'), @('--apply'))) {
+            & $py -m app.seeding.importer --dsn $dsn @args2 | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "seed importer failed ($($args2 -join ' '))" }
+        }
+    }
+    finally {
+        Pop-Location
+        Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    }
+    # Expect: 5 draft/pending mines, 8 draft/unverified labs, no scope rows, nothing public,
+    # exactly 2 audit events (the dry run rolled back), and still 5 + 8 after the re-run.
+    $seedCheck = "SELECT (SELECT count(*) FROM public.mines WHERE source_reference IS NOT NULL AND publication_status = 'draft' AND verification_status = 'pending')::text" +
+                 " || ',' || (SELECT count(*) FROM public.laboratories WHERE source_checked_at IS NOT NULL AND publication_status = 'draft' AND verification_status = 'unverified')::text" +
+                 " || ',' || (SELECT count(*) FROM public.lab_accreditation_scopes)::text" +
+                 " || ',' || (SELECT count(*) FROM public.public_mines)::text" +
+                 " || ',' || (SELECT count(*) FROM public.public_laboratories)::text" +
+                 " || ',' || (SELECT count(*) FROM public.platform_audit_logs WHERE action = 'seed.import')::text"
+    $seedOut = (($seedCheck | docker exec -i -e PGPASSWORD=postgres $Db psql -U supabase_admin -d postgres -tA) | Out-String).Trim()
+    if ($seedOut -ne '5,8,0,0,0,2') {
+        throw "Seed import check failed (got '$seedOut', expected '5,8,0,0,0,2')"
+    }
+    Write-Host 'PASS: seeds imported as drafts only, nothing public, re-run inserted nothing'
     Write-Host "`nLOCAL SUPABASE STACK TEST PASSED" -ForegroundColor Green
 }
 finally {

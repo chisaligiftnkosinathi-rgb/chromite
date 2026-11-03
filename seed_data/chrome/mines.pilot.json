@@ -1,0 +1,199 @@
+{
+  "dataset": "chrome-mines-pilot",
+  "version": 1,
+  "compiled_on": "2026-11-03",
+  "notice": "Candidate records for review. Imported as draft and pending verification. A record here is not evidence of a valid mining right, current operation or production. Every field comes from the cited source; nothing is inferred.",
+  "records": [
+    {
+      "slug": "tharisa-mine",
+      "mine_name": "Tharisa Mine",
+      "province": "North West",
+      "nearest_town": "Rustenburg",
+      "district": null,
+      "latitude": null,
+      "longitude": null,
+      "mine_type": null,
+      "operating_status": "unknown",
+      "public_description": "Co-producer of chrome concentrate and platinum group metals, mining MG chromitite layers. Operated by Tharisa Minerals, 100% owned by Tharisa plc (company website).",
+      "source": {
+        "name": "Tharisa plc website: Tharisa Minerals",
+        "url": "https://tharisa.com/tharisa-minerals.php",
+        "published": null,
+        "checked_at": "2026-11-03",
+        "kind": "company_primary"
+      },
+      "legal_right_leads": [
+        "Company states a mining right over 5 475 ha near Rustenburg, granted 19 September 2008 for an initial 30 years. Right reference number not given; verify against official records."
+      ],
+      "review_notes": "Company page implies the plants operate but states no status; operating status left unknown for the verification officer."
+    },
+    {
+      "slug": "dwarsrivier-chrome-mine",
+      "mine_name": "Dwarsrivier Chrome Mine",
+      "province": "Mpumalanga",
+      "nearest_town": "Lydenburg",
+      "district": null,
+      "latitude": null,
+      "longitude": null,
+      "mine_type": null,
+      "operating_status": "unknown",
+      "public_description": "Chrome ore mine near Lydenburg, Mpumalanga, as described by Assmang in 2015.",
+      "source": {
+        "name": "Assmang: Assore buys African Rainbow Minerals's stake in Dwarsrivier Chrome Mine",
+        "url": "https://assmang.co.za/?p=3441",
+        "published": "2015-06-25",
+        "checked_at": "2026-11-03",
+        "kind": "company_press_release"
+      },
+      "legal_right_leads": [],
+      "review_notes": "Source is from 2015: owned and operated by Assmang then, with a sale to an Assore-owned company agreed subject to conditions including ministerial approval. Current owner, operator, status and province must be confirmed."
+    },
+    {
+      "slug": "samancor-millsell",
+      "mine_name": "Millsell",
+      "province": "North West",
+      "nearest_town": null,
+      "district": null,
+      "latitude": null,
+      "longitude": null,
+      "mine_type": null,
+      "operating_status": "unknown",
+      "public_description": "Listed in 2006 as one of Samancor Chrome's Western Chrome Mines, western limb of the Bushveld Complex, between Rustenburg and Brits.",
+      "source": {
+        "name": "M. Visser, An overview of the history and current operational facilities of Samancor Chrome, Southern African Pyrometallurgy 2006, SAIMM",
+        "url": "https://redesign.911metallurgist.com/wp-content/uploads/2024/03/An-Overview-of-the-History-and-Current-Operational-Facilities-of-Samancor-Chrome.pdf",
+        "published": "2006-03-05",
+        "checked_at": "2026-11-03",
+        "kind": "conference_paper"
+      },
+      "legal_right_leads": [],
+      "review_notes": "Historical source (2006). Current status, owner and mine type unknown."
+    },
+    {
+      "slug": "samancor-elandsdrift",
+      "mine_name": "Elandsdrift",
+      "province": "North West",
+      "nearest_town": null,
+      "district": null,
+      "latitude": null,
+      "longitude": null,
+      "mine_type": null,
+      "operating_status": "unknown",
+      "public_description": "Listed in 2006 as one of Samancor Chrome's Western Chrome Mines, western limb of the Bushveld Complex, between Rustenburg and Brits.",
+      "source": {
+        "name": "M. Visser, An overview of the history and current operational facilities of Samancor Chrome, Southern African Pyrometallurgy 2006, SAIMM",
+        "url": "https://redesign.911metallurgist.com/wp-content/uploads/2024/03/An-Overview-of-the-History-and-Current-Operational-Facilities-of-Samancor-Chrome.pdf",
+        "published": "2006-03-05",
+        "checked_at": "2026-11-03",
+        "kind": "conference_paper"
+      },
+      "legal_right_leads": [],
+      "review_notes": "Historical source (2006). Current status, owner and mine type unknown."
+    },
+    {
+      "slug": "samancor-mooinooi",
+      "mine_name": "Mooinooi",
+      "province": "North West",
+      "nearest_town": null,
+      "district": null,
+      "latitude": null,
+      "longitude": null,
+      "mine_type": null,
+      "operating_status": "unknown",
+      "public_description": "Listed in 2006 as one of Samancor Chrome's Western Chrome Mines, western limb of the Bushveld Complex, between Rustenburg and Brits.",
+      "source": {
+        "name": "M. Visser, An overview of the history and current operational facilities of Samancor Chrome, Southern African Pyrometallurgy 2006, SAIMM",
+        "url": "https://redesign.911metallurgist.com/wp-content/uploads/2024/03/An-Overview-of-the-History-and-Current-Operational-Facilities-of-Samancor-Chrome.pdf",
+        "published": "2006-03-05",
+        "checked_at": "2026-11-03",
+        "kind": "conference_paper"
+      },
+      "legal_right_leads": [],
+      "review_notes": "Historical source (2006). Current status, owner and mine type unknown."
+    },
+    {
+      "slug": "samancor-lannex",
+      "mine_name": "Lannex",
+      "province": null,
+      "nearest_town": null,
+      "district": null,
+      "latitude": null,
+      "longitude": null,
+      "mine_type": null,
+      "operating_status": "unknown",
+      "public_description": "Listed in 2006 as one of Samancor Chrome's Eastern Chrome Mines in the Steelpoort area, eastern limb of the Bushveld Complex.",
+      "source": {
+        "name": "M. Visser, An overview of the history and current operational facilities of Samancor Chrome, Southern African Pyrometallurgy 2006, SAIMM",
+        "url": "https://redesign.911metallurgist.com/wp-content/uploads/2024/03/An-Overview-of-the-History-and-Current-Operational-Facilities-of-Samancor-Chrome.pdf",
+        "published": "2006-03-05",
+        "checked_at": "2026-11-03",
+        "kind": "conference_paper"
+      },
+      "legal_right_leads": [],
+      "review_notes": "Province not stated by the source; held back until a source gives it."
+    },
+    {
+      "slug": "samancor-tweefontein",
+      "mine_name": "Tweefontein",
+      "province": null,
+      "nearest_town": null,
+      "district": null,
+      "latitude": null,
+      "longitude": null,
+      "mine_type": null,
+      "operating_status": "unknown",
+      "public_description": "Listed in 2006 as one of Samancor Chrome's Eastern Chrome Mines in the Steelpoort area, eastern limb of the Bushveld Complex.",
+      "source": {
+        "name": "M. Visser, An overview of the history and current operational facilities of Samancor Chrome, Southern African Pyrometallurgy 2006, SAIMM",
+        "url": "https://redesign.911metallurgist.com/wp-content/uploads/2024/03/An-Overview-of-the-History-and-Current-Operational-Facilities-of-Samancor-Chrome.pdf",
+        "published": "2006-03-05",
+        "checked_at": "2026-11-03",
+        "kind": "conference_paper"
+      },
+      "legal_right_leads": [],
+      "review_notes": "Province not stated by the source; held back until a source gives it."
+    },
+    {
+      "slug": "samancor-winterveld",
+      "mine_name": "Winterveld",
+      "province": null,
+      "nearest_town": null,
+      "district": null,
+      "latitude": null,
+      "longitude": null,
+      "mine_type": null,
+      "operating_status": "unknown",
+      "public_description": "Listed in 2006 as one of Samancor Chrome's Eastern Chrome Mines in the Steelpoort area, eastern limb of the Bushveld Complex.",
+      "source": {
+        "name": "M. Visser, An overview of the history and current operational facilities of Samancor Chrome, Southern African Pyrometallurgy 2006, SAIMM",
+        "url": "https://redesign.911metallurgist.com/wp-content/uploads/2024/03/An-Overview-of-the-History-and-Current-Operational-Facilities-of-Samancor-Chrome.pdf",
+        "published": "2006-03-05",
+        "checked_at": "2026-11-03",
+        "kind": "conference_paper"
+      },
+      "legal_right_leads": [],
+      "review_notes": "Province not stated by the source; held back until a source gives it."
+    },
+    {
+      "slug": "kroondal-chrome-mine",
+      "mine_name": "Kroondal",
+      "province": null,
+      "nearest_town": null,
+      "district": null,
+      "latitude": null,
+      "longitude": null,
+      "mine_type": "underground",
+      "operating_status": "unknown",
+      "public_description": "Described in January 2026 as the operating mine of Glencore's Western Chrome Mines complex, an underground operation on shallow-dipping LG6 chromitite seams.",
+      "source": {
+        "name": "Mining Weekly: Glencore spells out mineral status across Africa, Australia, Americas",
+        "url": "https://www.miningweekly.com/article/glencore-spells-out-mineral-status-across-africa-australia-americas-2026-01-30",
+        "published": "2026-01-30",
+        "checked_at": "2026-11-03",
+        "kind": "trade_press"
+      },
+      "legal_right_leads": [],
+      "review_notes": "Province and owner not stated by the source; held back until a primary source gives them."
+    }
+  ]
+}
