@@ -62,6 +62,23 @@ try {
     New-Item -ItemType Directory -Force -Path 'supabase\migrations' | Out-Null
     foreach ($f in $Migrations) { Copy-Item (Join-Path $RepoRoot $f) 'supabase\migrations\' }
 
+    # Use ports 1000 above the defaults (55321-55329, inspector 9083) so this
+    # throwaway stack never collides with another local Supabase project.
+    $cfgPath = (Resolve-Path 'supabase\config.toml').Path
+    $cfg = [IO.File]::ReadAllText($cfgPath)
+    $cfg = [regex]::Replace($cfg, '(?m)^(\s*(?:port|shadow_port|inspector_port)\s*=\s*)(\d+)',
+        [Text.RegularExpressions.MatchEvaluator]{ param($m) $m.Groups[1].Value + ([int]$m.Groups[2].Value + 1000) })
+    # Studio and Analytics are not needed for these database checks, and
+    # Analytics on Windows requires the Docker daemon on tcp://localhost:2375.
+    # Disabling them changes no database, RLS or API behaviour.
+    foreach ($section in 'studio', 'analytics') {
+        $pattern = "(?ms)^(\[$section\]\r?\n(?:(?!^\[).)*?^\s*enabled\s*=\s*)true"
+        if ($cfg -notmatch $pattern) { throw "Could not find [$section] enabled = true in config.toml" }
+        $cfg = [regex]::Replace($cfg, $pattern, '${1}false')
+    }
+    [IO.File]::WriteAllText($cfgPath, $cfg)   # UTF-8 without BOM
+    Write-Host 'Local ports: API 55321, DB 55322 (defaults + 1000); Studio and Analytics disabled'
+
     Step 'supabase start (applies the 3 migrations to the local database)'
     & $Cli start | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'supabase start failed' }
@@ -89,9 +106,16 @@ try {
 
     Step 'Rollback, verify defect state returns, then re-apply forward'
     Psql $Rollback 'postgres'
-    $out = 'SET ROLE anon; SELECT count(*) FROM public.public_mines;' |
-        docker exec -i -e PGPASSWORD=postgres $Db psql -U supabase_admin -d postgres 2>&1
-    if (($out | Out-String) -notmatch 'permission denied') { throw 'Rollback did not restore pre-migration state' }
+    # Ask yes/no questions instead of provoking an error: Windows PowerShell 5.1
+    # turns native stderr into a terminating error under ErrorActionPreference=Stop.
+    $check = "SELECT has_column_privilege('anon', 'public.mines', 'mine_name', 'SELECT')::text" +
+             " || ',' || has_column_privilege('authenticated', 'public.organizations', 'organization_name', 'SELECT')::text" +
+             " || ',' || (to_regclass('public.platform_audit_logs') IS NULL)::text" +
+             " || ',' || (to_regprocedure('private.is_org_member(uuid)') IS NULL)::text"
+    $out = (($check | docker exec -i -e PGPASSWORD=postgres $Db psql -U supabase_admin -d postgres -tA) | Out-String).Trim()
+    if ($out -ne 'false,false,true,true') {
+        throw "Rollback did not restore pre-migration state (got '$out', expected 'false,false,true,true')"
+    }
     Write-Host 'PASS: rollback restored pre-migration permissions'
     Psql $Forward 'postgres'
     Psql $Probe
