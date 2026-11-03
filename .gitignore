@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------
+# Chromite — files that must NEVER be committed
+# ---------------------------------------------------------------
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Supabase CLI local state (may contain project refs and local secrets)
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+
+# Local data, uploads, certificates, audit exports and backups
+data/
+records/
+
+# Archives and local copies (one ZIP contains a live credential)
+*.zip
+*.backup
+_archive/
+.phase0-baseline/
+chromite_structure.txt
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node (Supabase CLI dev dependency)
+node_modules/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
