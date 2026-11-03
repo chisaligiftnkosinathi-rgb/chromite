@@ -1,0 +1,176 @@
+{
+  "dataset": "chrome-laboratories-candidates",
+  "version": 1,
+  "compiled_on": "2026-11-03",
+  "notice": "Candidate laboratories that publicly state chrome testing. NONE is recorded as accredited: no current SANAS certificate or schedule of accreditation was examined. Claims below are what each laboratory or a third party says, queued for a verification officer to check against the SANAS schedule. Imported as draft and unverified; no accreditation scope rows are created.",
+  "records": [
+    {
+      "laboratory_name": "Cotecna South Africa, Richards Bay laboratory",
+      "city": "Richards Bay",
+      "province": null,
+      "physical_address": null,
+      "website_url": "https://www.cotecna.com",
+      "source": {
+        "name": "Cotecna news: Cotecna South Africa gains ISO 17025 accreditation",
+        "url": "https://www.cotecna.com/en/media/news/cotecna-south-africa-gains-iso17025-accreditation",
+        "published": "2022-04-12",
+        "checked_at": "2026-11-03",
+        "kind": "company_press_release"
+      },
+      "accreditation_claims": [
+        {
+          "claim": "SANAS accreditation T0974 granted 4 March 2022 for chemical analysis to ISO/IEC 17025:2017; accredited reports for coal, manganese, iron ore and chrome within the SANAS scope.",
+          "accreditation_body": "SANAS",
+          "accreditation_number_claimed": "T0974",
+          "claimed_by": "laboratory",
+          "status": "unverified"
+        }
+      ],
+      "review_notes": "Confirm T0974 is current and which chrome analytes, methods and materials its schedule covers."
+    },
+    {
+      "laboratory_name": "AHK South Africa, Richards Bay laboratory",
+      "city": "Richards Bay",
+      "province": null,
+      "physical_address": null,
+      "website_url": "https://www.ahkgroup.com",
+      "source": {
+        "name": "AHK capability statement, South Africa",
+        "url": "https://www.ahkgroup.com/wp-content/uploads/2025/02/AHK_CapabilityStatement_SouthAfrica-190225-1.pdf",
+        "published": "2025-02-19",
+        "checked_at": "2026-11-03",
+        "kind": "company_primary"
+      },
+      "accreditation_claims": [
+        {
+          "claim": "Laboratory accredited to SANAS ISO 17025:2017 for several commodities including chrome ore/concentrate. No accreditation number given.",
+          "accreditation_body": "SANAS",
+          "accreditation_number_claimed": null,
+          "claimed_by": "laboratory",
+          "status": "unverified"
+        }
+      ],
+      "review_notes": "Find the facility number and current schedule."
+    },
+    {
+      "laboratory_name": "AHK South Africa, Rustenburg laboratory",
+      "city": "Rustenburg",
+      "province": null,
+      "physical_address": null,
+      "website_url": "https://www.ahkgroup.com",
+      "source": {
+        "name": "AHK capability statement, South Africa",
+        "url": "https://www.ahkgroup.com/wp-content/uploads/2025/02/AHK_CapabilityStatement_SouthAfrica-190225-1.pdf",
+        "published": "2025-02-19",
+        "checked_at": "2026-11-03",
+        "kind": "company_primary"
+      },
+      "accreditation_claims": [
+        {
+          "claim": "In February 2025 the laboratory was acquiring accreditation for chrome ore/concentrate and ferrochrome methods (chrome by titration, impurities by ICP-OES). Not stated as accredited.",
+          "accreditation_body": "SANAS",
+          "accreditation_number_claimed": null,
+          "claimed_by": "laboratory",
+          "status": "unverified"
+        }
+      ],
+      "review_notes": "Check whether accreditation has since been granted."
+    },
+    {
+      "laboratory_name": "AHK South Africa, Steelpoort laboratory",
+      "city": "Steelpoort",
+      "province": null,
+      "physical_address": null,
+      "website_url": "https://www.ahkgroup.com",
+      "source": {
+        "name": "AHK capability statement, South Africa",
+        "url": "https://www.ahkgroup.com/wp-content/uploads/2025/02/AHK_CapabilityStatement_SouthAfrica-190225-1.pdf",
+        "published": "2025-02-19",
+        "checked_at": "2026-11-03",
+        "kind": "company_primary"
+      },
+      "accreditation_claims": [
+        {
+          "claim": "In February 2025 the laboratory was acquiring ISO 17025:2017 accreditation for chrome ore, concentrate and slag methods (chrome by titration, impurities by ICP-OES). Not stated as accredited.",
+          "accreditation_body": "SANAS",
+          "accreditation_number_claimed": null,
+          "claimed_by": "laboratory",
+          "status": "unverified"
+        }
+      ],
+      "review_notes": "Check whether accreditation has since been granted."
+    },
+    {
+      "laboratory_name": "Mitra SK, Richards Bay laboratory",
+      "city": "Richards Bay",
+      "province": null,
+      "physical_address": null,
+      "website_url": "https://mitrask.com",
+      "source": {
+        "name": "Mitra SK: Global network, Africa",
+        "url": "https://mitrask.com/global-network-africa",
+        "published": null,
+        "checked_at": "2026-11-03",
+        "kind": "company_primary"
+      },
+      "accreditation_claims": [
+        {
+          "claim": "Lead from the owner's notes of 3 November 2026: SANAS T0658, with a schedule covering chromium ore and concentrate determinations, and a certificate copy stating expiry on 29 October 2025. Not examined in this research; the company page itself states no accreditation.",
+          "accreditation_body": "SANAS",
+          "accreditation_number_claimed": "T0658",
+          "claimed_by": "third_party",
+          "status": "unverified"
+        }
+      ],
+      "review_notes": "The company page lists chrome ore testing but no accreditation. Which Mitra SK facility T0658 belongs to is not established."
+    },
+    {
+      "laboratory_name": "Mitra SK, Postmasburg laboratory",
+      "city": "Postmasburg",
+      "province": null,
+      "physical_address": null,
+      "website_url": "https://mitrask.com",
+      "source": {
+        "name": "Mitra SK: Global network, Africa",
+        "url": "https://mitrask.com/global-network-africa",
+        "published": null,
+        "checked_at": "2026-11-03",
+        "kind": "company_primary"
+      },
+      "accreditation_claims": [],
+      "review_notes": "Company page lists chrome ore among minerals tested; no accreditation stated."
+    },
+    {
+      "laboratory_name": "Mitra SK, Benrose laboratory",
+      "city": "Johannesburg",
+      "province": null,
+      "physical_address": null,
+      "website_url": "https://mitrask.com",
+      "source": {
+        "name": "Mitra SK: Global network, Africa",
+        "url": "https://mitrask.com/global-network-africa",
+        "published": null,
+        "checked_at": "2026-11-03",
+        "kind": "company_primary"
+      },
+      "accreditation_claims": [],
+      "review_notes": "Company page lists chrome ore among minerals tested; no accreditation stated."
+    },
+    {
+      "laboratory_name": "IMEC Laboratory Services",
+      "city": "Rustenburg",
+      "province": "North West",
+      "physical_address": "205 President Mbeki Drive, Rustenburg, 0299",
+      "website_url": "https://imeclab.co.za",
+      "source": {
+        "name": "IMEC Laboratory Services website",
+        "url": "https://imeclab.co.za/",
+        "published": null,
+        "checked_at": "2026-11-03",
+        "kind": "company_primary"
+      },
+      "accreditation_claims": [],
+      "review_notes": "States analytical services for chromite and manganese ores, concentrates and tailings. No SANAS accreditation stated."
+    }
+  ]
+}

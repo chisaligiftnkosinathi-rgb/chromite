@@ -30,3 +30,13 @@ Read-only audit. Full report: Chromite project doc `claude/phase-1-repository-au
   `tools/git/phase0-commit.ps1` (owner runs Git from PowerShell).
 - Backups, ZIP and `chromite_structure.txt` preserved in place, git-ignored.
 - Hosted Supabase: **not changed**.
+
+## 2026-11-03 — Chrome seed pilot (local only)
+- `seed_data/chrome/`: 9 candidate mines (5 importable, 4 held back for missing province) and
+  8 candidate laboratories, every record citing a source checked on 3 Nov 2026.
+- No laboratory is marked accredited; 3 accreditation claims (T0974, T0658, AHK Richards Bay)
+  are queued as unverified. No accreditation scope or mining-right rows are created.
+- `app/seeding/`: validated models and an importer that refuses non-local databases, dry-runs by
+  default, imports drafts only, never overwrites reviewed records, and writes an audit event.
+- Tests: 26 model tests, 6 database tests (replay cluster). Full suite 198 passed.
+- Hosted Supabase: not changed.
